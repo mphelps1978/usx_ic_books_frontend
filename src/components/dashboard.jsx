@@ -1,66 +1,161 @@
-import { React, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { logout } from '../store/slices/authSlice';
-import { Link } from 'react-router-dom';
-import { Bar, Pie } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
+import { React, useEffect } from "react";
+import { useSelector, useDispatch } from "react-redux";
+import { fetchLoads } from "../store/slices/loadsSlice";
+import { Bar, Pie } from "react-chartjs-2";
+import {
+	Chart as ChartJS,
+	CategoryScale,
+	LinearScale,
+	BarElement,
+	ArcElement,
+	Title,
+	Tooltip,
+	Legend,
+} from "chart.js";
+import {
+	Grid,
+	Paper,
+	Typography,
+	Box,
+	CircularProgress,
+	Alert,
+} from "@mui/material";
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, ArcElement, Title, Tooltip, Legend);
+ChartJS.register(
+	CategoryScale,
+	LinearScale,
+	BarElement,
+	ArcElement,
+	Title,
+	Tooltip,
+	Legend
+);
 
 function Dashboard() {
-  const dispatch = useDispatch();
-  const { token } = useSelector((state) => state.auth);
+	const dispatch = useDispatch();
+	const {
+		list: loads,
+		loading,
+		error,
+	} = useSelector(
+		(state) => state.loads || { list: [], loading: false, error: null }
+	);
 
-  const milesData = {
-    labels: ['Deadhead Miles', 'Loaded Miles'],
-    datasets: [
-      {
-        label: 'Miles',
-        data: [500, 2000], // Dummy data
-        backgroundColor: ['rgba(255, 99, 132, 0.2)', 'rgba(54, 162, 235, 0.2)'],
-        borderColor: ['rgba(255, 99, 132, 1)', 'rgba(54, 162, 235, 1)'],
-        borderWidth: 1,
-      },
-    ],
-  };
+	useEffect(() => {
+		dispatch(fetchLoads());
+	}, [dispatch]);
 
-  const revenueData = {
-    labels: ['Jan', 'Feb', 'Mar'],
-    datasets: [
-      {
-        label: 'Net Revenue ($)',
-        data: [5000, 7000, 6000], // Dummy data
-        backgroundColor: ['rgba(75, 192, 192, 0.2)'],
-        borderColor: ['rgba(75, 192, 192, 1)'],
-        borderWidth: 1,
-      },
-    ],
-  };
+	const milesData = {
+		labels: ["Deadhead Miles", "Loaded Miles"],
+		datasets: [
+			{
+				label: "Miles",
+				data: [500, 2000], // Dummy data
+				backgroundColor: ["rgba(255, 99, 132, 0.2)", "rgba(54, 162, 235, 0.2)"],
+				borderColor: ["rgba(255, 99, 132, 1)", "rgba(54, 162, 235, 1)"],
+				borderWidth: 1,
+			},
+		],
+	};
 
-  return (
-    <div className="min-h-screen bg-gray-100">
-      <nav className="bg-blue-600 text-white p-4 flex justify-between">
-        <div>
-          <Link to="/dashboard" className="mr-4">Dashboard</Link>
-          <Link to="/loads">Loads</Link>
-        </div>
-        <button onClick={() => dispatch(logout())} className="hover:underline">Logout</button>
-      </nav>
-      <div className="container mx-auto p-6">
-        <h2 className="text-2xl font-bold mb-4">Dashboard</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="bg-white p-4 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold mb-2">Deadhead vs Loaded Miles</h3>
-            <Pie data={milesData} />
-          </div>
-          <div className="bg-white p-4 rounded-lg shadow-md">
-            <h3 className="text-lg font-semibold mb-2">Net Revenue by Month</h3>
-            <Bar data={revenueData} />
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+	const revenueData = {
+		labels: ["Jan", "Feb", "Mar"],
+		datasets: [
+			{
+				label: "Net Revenue ($)",
+				data: [5000, 7000, 6000], // Dummy data
+				backgroundColor: ["rgba(75, 192, 192, 0.2)"],
+				borderColor: ["rgba(75, 192, 192, 1)"],
+				borderWidth: 1,
+			},
+		],
+	};
+
+	const chartOptions = {
+		responsive: true,
+		maintainAspectRatio: false,
+	};
+
+	const activeLoad = loads.find((load) => !load.dateDelivered);
+
+	return (
+		<Box sx={{ flexGrow: 1 }}>
+			<Typography variant="h4" gutterBottom component="h2" sx={{ mb: 4 }}>
+				Dashboard
+			</Typography>
+
+			{loading && <CircularProgress />}
+			{error && <Alert severity="error">{error}</Alert>}
+
+			<Grid container spacing={3}>
+				{activeLoad && (
+					<Grid item xs={12} md={12} lg={4}>
+						<Paper
+							sx={{
+								p: 2,
+								display: "flex",
+								flexDirection: "column",
+								height: 300,
+								backgroundColor: "primary.light",
+							}}
+						>
+							<Typography
+								variant="h6"
+								gutterBottom
+								component="h3"
+								sx={{ color: "primary.contrastText" }}
+							>
+								Current Active Load
+							</Typography>
+							<Box sx={{ flexGrow: 1, color: "primary.contrastText" }}>
+								<Typography variant="subtitle1">
+									PRO Number: {activeLoad.proNumber}
+								</Typography>
+								<Typography variant="body1">
+									Origin: {activeLoad.originCity}, {activeLoad.originState}
+								</Typography>
+								<Typography variant="body1">
+									Destination: {activeLoad.destinationCity},{" "}
+									{activeLoad.destinationState}
+								</Typography>
+								<Typography variant="body1">
+									Trailer: {activeLoad.trailerNumber || "N/A"}
+								</Typography>
+								<Typography variant="body1" sx={{ mt: 1, fontWeight: "bold" }}>
+									Status: In Transit
+								</Typography>
+							</Box>
+						</Paper>
+					</Grid>
+				)}
+
+				<Grid item xs={12} md={activeLoad ? 6 : 12} lg={activeLoad ? 4 : 6}>
+					<Paper
+						sx={{ p: 2, display: "flex", flexDirection: "column", height: 300 }}
+					>
+						<Typography variant="h6" gutterBottom component="h3">
+							Deadhead vs Loaded Miles
+						</Typography>
+						<Box sx={{ flexGrow: 1, position: "relative" }}>
+							<Pie data={milesData} options={chartOptions} />
+						</Box>
+					</Paper>
+				</Grid>
+				<Grid item xs={12} md={activeLoad ? 6 : 12} lg={activeLoad ? 4 : 6}>
+					<Paper
+						sx={{ p: 2, display: "flex", flexDirection: "column", height: 300 }}
+					>
+						<Typography variant="h6" gutterBottom component="h3">
+							Net Revenue by Month
+						</Typography>
+						<Box sx={{ flexGrow: 1, position: "relative" }}>
+							<Bar data={revenueData} options={chartOptions} />
+						</Box>
+					</Paper>
+				</Grid>
+			</Grid>
+		</Box>
+	);
 }
 
 export default Dashboard;

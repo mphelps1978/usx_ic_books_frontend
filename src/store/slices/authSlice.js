@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
-const apiurl = 'http://locahost:3001/api'
+const apiurl = 'http://localhost:3001/api'
 
 export const register = createAsyncThunk('auth/register', async ({ username, email, password }) => {
   const response = await axios.post(`${apiurl}/register`, { username, email, password });
