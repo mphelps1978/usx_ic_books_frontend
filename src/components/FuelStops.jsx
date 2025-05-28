@@ -38,9 +38,29 @@ import DeleteIcon from "@mui/icons-material/Delete";
 
 // Helper to format date for display and for date inputs
 const formatDateForDisplay = (dateString) => {
+	console.log(
+		"Raw dateString for display:",
+		dateString,
+		"Type:",
+		typeof dateString
+	);
 	if (!dateString) return "N/A";
-	// Assuming dateString is YYYY-MM-DD or a full ISO string from backend
-	return new Date(dateString + "T00:00:00").toLocaleDateString();
+	const date = new Date(dateString);
+	// Check if the date is valid
+	if (isNaN(date.getTime())) {
+		console.warn(
+			"Invalid date encountered in formatDateForDisplay:",
+			dateString
+		);
+		return "Invalid Date";
+	}
+	// If it's a valid date, then format it.
+	// Adding T00:00:00 helps if dateString is just YYYY-MM-DD to interpret it as local midnight.
+	// If dateString is a full ISO string, this might not be necessary but usually doesn't hurt.
+	const adjustedDate = new Date(
+		dateString.includes("T") ? dateString : dateString + "T00:00:00"
+	);
+	return adjustedDate.toLocaleDateString(undefined, { timeZone: "UTC" }); // Specify UTC to be safe with toLocaleDateString
 };
 
 const formatDateForInput = (date) => {
@@ -84,9 +104,22 @@ function FuelStops() {
 	const handleEditFuelStop = (fuelStop) => {
 		setIsEditing(true);
 		// Ensure date is formatted correctly for the date input field
+		// And map model field names (from fuelStop) to formData field names (used in form)
 		setFormData({
-			...fuelStop,
+			id: fuelStop.id, // Keep the id
+			proNumber: fuelStop.proNumber,
 			dateOfStop: formatDateForInput(fuelStop.dateOfStop),
+			vendorName: fuelStop.vendor, // Map from 'vendor' (model) to 'vendorName' (form)
+			location: fuelStop.location,
+			gallonsDieselPurchased: fuelStop.gallonsDeiselPurchased, // Map from 'gallonsDeiselPurchased' (model)
+			pumpPriceDiesel: fuelStop.DieselpricePerGallon, // Map from 'DieselpricePerGallon' (model)
+			gallonsDefPurchased: fuelStop.gallonsDefPurchased, // Matches
+			pumpPriceDef: fuelStop.DefpricePerGallon, // Map from 'DefpricePerGallon' (model)
+			// Calculated fields are usually not set directly in formData for editing,
+			// but if they are displayed in the edit form (disabled), ensure keys match those displays
+			costDieselPurchased: fuelStop.totalDieselCost,
+			totalDefCost: fuelStop.totalDefCost,
+			totalFuelStopCost: fuelStop.totalFuelStop,
 		});
 		setIsModalOpen(true);
 	};
@@ -100,8 +133,12 @@ function FuelStops() {
 	const handleSubmitModal = async (e) => {
 		e.preventDefault();
 		const payload = {
-			...formData,
-			dateOfStop: formData.dateOfStop,
+			proNumber: formData.proNumber,
+			dateOfStop: formData.dateOfStop
+				? formatDateForInput(new Date(formData.dateOfStop))
+				: null,
+			vendorName: formData.vendorName,
+			location: formData.location,
 			gallonsDieselPurchased: parseFloat(formData.gallonsDieselPurchased) || 0,
 			pumpPriceDiesel: parseFloat(formData.pumpPriceDiesel) || 0,
 			gallonsDefPurchased: formData.gallonsDefPurchased
@@ -171,13 +208,14 @@ function FuelStops() {
 								<TableCell>Load PRO</TableCell>
 								<TableCell>Date</TableCell>
 								<TableCell>Vendor</TableCell>
+								<TableCell>Location</TableCell>
 								<TableCell align="right">Diesel Gal.</TableCell>
 								<TableCell align="right">Diesel Price/Gal</TableCell>
+								<TableCell align="right">Total Diesel Cost</TableCell>
 								<TableCell align="right">DEF Gal.</TableCell>
-								<TableCell align="right">Diesel Cost</TableCell>
 								<TableCell align="right">DEF Price/Gal</TableCell>
-								<TableCell align="right">DEF Cost</TableCell>
-								<TableCell align="right">Total Cost</TableCell>
+								<TableCell align="right">Total DEF Cost</TableCell>
+								<TableCell align="right">Total Stop Cost</TableCell>
 								<TableCell align="center">Actions</TableCell>
 							</TableRow>
 						</TableHead>
@@ -191,15 +229,24 @@ function FuelStops() {
 										{fs.proNumber}
 									</TableCell>
 									<TableCell>{formatDateForDisplay(fs.dateOfStop)}</TableCell>
-									<TableCell>{fs.vendorName}</TableCell>
+									<TableCell>{fs.vendor}</TableCell>
+									<TableCell>{fs.location || "N/A"}</TableCell>
 									<TableCell align="right">
-										{parseFloat(fs.gallonsDieselPurchased).toFixed(2)}
+										{/* Use model field name: gallonsDeiselPurchased */}
+										{fs.gallonsDeiselPurchased !== undefined &&
+										fs.gallonsDeiselPurchased !== null
+											? parseFloat(fs.gallonsDeiselPurchased).toFixed(2)
+											: "N/A"}
 									</TableCell>
 									<TableCell align="right">
-										${parseFloat(fs.pumpPriceDiesel).toFixed(3)}
+										{/* Use model field name: DieselpricePerGallon */}
+										{fs.DieselpricePerGallon !== undefined &&
+										fs.DieselpricePerGallon !== null
+											? `$${parseFloat(fs.DieselpricePerGallon).toFixed(3)}`
+											: "N/A"}
 									</TableCell>
 									<TableCell align="right">
-										${parseFloat(fs.costDieselPurchased).toFixed(2)}
+										${parseFloat(fs.totalDieselCost).toFixed(2)}
 									</TableCell>
 									<TableCell align="right">
 										{fs.gallonsDefPurchased
@@ -212,12 +259,12 @@ function FuelStops() {
 											: "N/A"}
 									</TableCell>
 									<TableCell align="right">
-										{fs.costDef
-											? `$${parseFloat(fs.totalCostDef).toFixed(2)}`
+										{fs.totalDefCost
+											? `$${parseFloat(fs.totalDefCost).toFixed(2)}`
 											: "N/A"}
 									</TableCell>
 									<TableCell align="right">
-										${parseFloat(fs.totalFuelStopCost).toFixed(2)}
+										${parseFloat(fs.totalFuelStop).toFixed(2)}
 									</TableCell>
 									<TableCell align="center">
 										<Tooltip title="Edit Fuel Stop">
@@ -267,7 +314,7 @@ function FuelStops() {
 									name="proNumber"
 									value={formData.proNumber || ""}
 									onChange={handleInputChange}
-									disabled={isEditing} // Typically PRO number isn't changed on edit
+									disabled={isEditing}
 								>
 									<MenuItem value="">
 										<em>Select Load</em>
@@ -303,6 +350,18 @@ function FuelStops() {
 								fullWidth
 								required
 								margin="dense"
+							/>
+						</Grid>
+						<Grid item xs={12} sm={6}>
+							<TextField
+								margin="dense"
+								label="Location (e.g., City, ST)"
+								type="text"
+								name="location"
+								value={formData.location || ""}
+								onChange={handleInputChange}
+								fullWidth
+								required
 							/>
 						</Grid>
 						<Grid item xs={12} sm={6} md={3}>

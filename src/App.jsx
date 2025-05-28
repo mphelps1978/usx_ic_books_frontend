@@ -1,34 +1,100 @@
-import React from "react";
-import { Route, Routes, Navigate, Link as RouterLink } from "react-router-dom";
-import { useSelector } from "react-redux";
+import React, { useState, useEffect } from "react";
+import {
+	Route,
+	Routes,
+	Navigate,
+	Link as RouterLink,
+	useNavigate,
+} from "react-router-dom";
+import { useSelector, useDispatch } from "react-redux";
 import Login from "./components/Login";
 import Register from "./components/Register";
 import Dashboard from "./components/Dashboard";
 import Loads from "./components/Loads";
 import FuelStops from "./components/FuelStops";
+import Maintenance from "./components/Maintenance";
+import Repairs from "./components/Repairs";
+import OtherExpenses from "./components/OtherExpenses";
+import Settlements from "./components/Settlements";
+import Taxes from "./components/Taxes";
+import Settings from "./components/Settings";
+import { logout } from "./store/slices/authSlice";
+import { fetchUserSettings } from "./store/slices/userSettingsSlice";
 import {
 	Box,
-	Drawer,
-	List,
-	ListItem,
-	ListItemButton,
-	ListItemText,
 	Toolbar,
 	Typography,
 	AppBar,
+	Button,
+	Menu,
+	MenuItem,
+	IconButton,
+	ListItemIcon,
+	ListItemText,
 } from "@mui/material";
-
-const drawerWidth = 240;
+import MenuIcon from "@mui/icons-material/Menu";
+import DashboardIcon from "@mui/icons-material/Dashboard";
+import LocalShippingIcon from "@mui/icons-material/LocalShipping";
+import LocalGasStationIcon from "@mui/icons-material/LocalGasStation";
+import BuildIcon from "@mui/icons-material/Build";
+import AttachMoneyIcon from "@mui/icons-material/AttachMoney";
+import DescriptionIcon from "@mui/icons-material/Description";
+import AccountBalanceIcon from "@mui/icons-material/AccountBalance";
+import ExitToAppIcon from "@mui/icons-material/ExitToApp";
+import SettingsIcon from "@mui/icons-material/Settings";
 
 function App() {
 	const auth = useSelector((state) => state.auth || {});
 	const { token } = auth;
+	const dispatch = useDispatch();
+	const navigate = useNavigate();
 
-	// Simple Nav items for now
-	const navItems = [
-		{ text: "Dashboard", path: "/dashboard" },
-		{ text: "Loads", path: "/loads" },
-		{ text: "Fuel Stops", path: "/fuel-stops" },
+	// Fetch user settings when the authenticated app loads
+	useEffect(() => {
+		if (token) {
+			// Only fetch if authenticated
+			dispatch(fetchUserSettings());
+		}
+	}, [dispatch, token]);
+
+	const [anchorElOnTheRoad, setAnchorElOnTheRoad] = useState(null);
+	const [anchorElInTheOffice, setAnchorElInTheOffice] = useState(null);
+
+	const handleMenuOpen = (event, setAnchorEl) => {
+		setAnchorEl(event.currentTarget);
+	};
+
+	const handleMenuClose = (setAnchorEl) => {
+		setAnchorEl(null);
+	};
+
+	const handleNavigate = (path, setAnchorEl) => {
+		navigate(path);
+		if (setAnchorEl) {
+			handleMenuClose(setAnchorEl);
+		}
+	};
+
+	const handleLogout = () => {
+		dispatch(logout());
+		navigate("/login");
+	};
+
+	const onTheRoadItems = [
+		{ text: "Loads", path: "/loads", icon: <LocalShippingIcon /> },
+		{ text: "Fuel Stops", path: "/fuel-stops", icon: <LocalGasStationIcon /> },
+		{ text: "Maintenance", path: "/maintenance", icon: <BuildIcon /> },
+		{ text: "Repairs", path: "/repairs", icon: <BuildIcon /> },
+		{
+			text: "Other Expenses",
+			path: "/other-expenses",
+			icon: <AttachMoneyIcon />,
+		},
+	];
+
+	const inTheOfficeItems = [
+		{ text: "Settlements", path: "/settlements", icon: <DescriptionIcon /> },
+		{ text: "Taxes", path: "/taxes", icon: <AccountBalanceIcon /> },
 	];
 
 	if (!token) {
@@ -44,57 +110,111 @@ function App() {
 
 	// Render layout for authenticated users
 	return (
-		<Box sx={{ display: "flex" }}>
-			<AppBar
-				position="fixed"
-				sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
-			>
+		<Box sx={{ display: "flex", flexDirection: "column", minHeight: "100vh" }}>
+			<AppBar position="static">
 				<Toolbar>
-					<Typography variant="h6" noWrap component="div">
+					<Typography
+						variant="h6"
+						noWrap
+						component={RouterLink}
+						to="/dashboard"
+						sx={{
+							flexGrow: 1,
+							color: "inherit",
+							textDecoration: "none",
+							mr: 2,
+						}}
+					>
 						USX IC Books
 					</Typography>
+
+					<Button
+						color="inherit"
+						onClick={() => handleNavigate("/dashboard")}
+						startIcon={<DashboardIcon />}
+					>
+						Dashboard
+					</Button>
+
+					<Button
+						color="inherit"
+						onClick={(e) => handleMenuOpen(e, setAnchorElOnTheRoad)}
+					>
+						On The Road
+					</Button>
+					<Menu
+						anchorEl={anchorElOnTheRoad}
+						open={Boolean(anchorElOnTheRoad)}
+						onClose={() => handleMenuClose(setAnchorElOnTheRoad)}
+					>
+						{onTheRoadItems.map((item) => (
+							<MenuItem
+								key={item.text}
+								onClick={() => handleNavigate(item.path, setAnchorElOnTheRoad)}
+							>
+								{item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
+								<ListItemText primary={item.text} />
+							</MenuItem>
+						))}
+					</Menu>
+
+					<Button
+						color="inherit"
+						onClick={(e) => handleMenuOpen(e, setAnchorElInTheOffice)}
+					>
+						In The Office
+					</Button>
+					<Menu
+						anchorEl={anchorElInTheOffice}
+						open={Boolean(anchorElInTheOffice)}
+						onClose={() => handleMenuClose(setAnchorElInTheOffice)}
+					>
+						{inTheOfficeItems.map((item) => (
+							<MenuItem
+								key={item.text}
+								onClick={() =>
+									handleNavigate(item.path, setAnchorElInTheOffice)
+								}
+							>
+								{item.icon && <ListItemIcon>{item.icon}</ListItemIcon>}
+								<ListItemText primary={item.text} />
+							</MenuItem>
+						))}
+					</Menu>
+
+					<Button
+						color="inherit"
+						onClick={() => handleNavigate("/settings")}
+						startIcon={<SettingsIcon />}
+						sx={{ ml: 1 }}
+					>
+						Settings
+					</Button>
+
+					<Button
+						color="inherit"
+						onClick={handleLogout}
+						startIcon={<ExitToAppIcon />}
+						sx={{ ml: 2 }}
+					>
+						Logout
+					</Button>
 				</Toolbar>
 			</AppBar>
-			<Drawer
-				variant="permanent"
-				sx={{
-					width: drawerWidth,
-					flexShrink: 0,
-					[`& .MuiDrawer-paper`]: {
-						width: drawerWidth,
-						boxSizing: "border-box",
-					},
-				}}
-			>
-				<Toolbar /> {/* Spacer for under the AppBar */}
-				<Box sx={{ overflow: "auto" }}>
-					<List>
-						{navItems.map((item) => (
-							<ListItem
-								key={item.text}
-								disablePadding
-								component={RouterLink}
-								to={item.path}
-								sx={{ color: "inherit", textDecoration: "none" }}
-							>
-								<ListItemButton>
-									<ListItemText primary={item.text} />
-								</ListItemButton>
-							</ListItem>
-						))}
-					</List>
-				</Box>
-			</Drawer>
-			<Box component="main" sx={{ flexGrow: 1, p: 3 }}>
-				<Toolbar /> {/* Spacer for under the AppBar */}
+
+			<Box component="main" sx={{ flexGrow: 1, p: 3, width: "100%" }}>
 				<Routes>
 					<Route path="/dashboard" element={<Dashboard />} />
 					<Route path="/loads" element={<Loads />} />
 					<Route path="/fuel-stops" element={<FuelStops />} />
+					<Route path="/maintenance" element={<Maintenance />} />
+					<Route path="/repairs" element={<Repairs />} />
+					<Route path="/other-expenses" element={<OtherExpenses />} />
+					<Route path="/settlements" element={<Settlements />} />
+					<Route path="/taxes" element={<Taxes />} />
+					<Route path="/settings" element={<Settings />} />
 					<Route path="/" element={<Navigate to="/dashboard" />} />
-					{/* Add other authenticated routes here */}
-					<Route path="*" element={<Navigate to="/dashboard" />} />{" "}
-					{/* Catch-all for authenticated */}
+					<Route path="*" element={<Navigate to="/dashboard" />} />
 				</Routes>
 			</Box>
 		</Box>

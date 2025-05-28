@@ -4,6 +4,7 @@ import { Provider } from "react-redux";
 import { BrowserRouter } from "react-router-dom";
 import App from "./App";
 import { store } from "./store";
+import { setTokenFromStorage } from "./store/slices/authSlice";
 import "./index.css";
 import { ThemeProvider, createTheme } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
@@ -58,6 +59,12 @@ const quickBooksTheme = createTheme({
 		// We can add more component overrides here
 	},
 });
+
+// Check for token in localStorage on app load
+const token = localStorage.getItem("authToken");
+if (token) {
+	store.dispatch(setTokenFromStorage(token));
+}
 
 ReactDOM.createRoot(document.getElementById("root")).render(
 	<Provider store={store}>
